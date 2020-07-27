@@ -29,7 +29,7 @@ a、下载完库后解压，运行predict.py，输入
 ```python
 img/timg.jpg
 ```
-可完成预测。
+可完成预测。  
 b、利用video.py可进行摄像头检测。  
 #### 2、使用自己训练的权重
 a、按照训练步骤训练。  
@@ -45,7 +45,7 @@ c、运行predict.py，输入
 ```python
 img/timg.jpg
 ```
-可完成预测。
+可完成预测。  
 d、利用video.py可进行摄像头检测。  
 
 ### 训练步骤
