@@ -31,6 +31,8 @@ if __name__ == "__main__":
 
     #-------------------------------#
     #   创立模型
+    #   请注意主干网络与预训练权重的
+    #   对应
     #-------------------------------#
     model = RetinaFace(cfg, backbone=backbone)
     model_path = "model_data/retinaface_mobilenet025.h5"
@@ -52,7 +54,14 @@ if __name__ == "__main__":
     for i in range(freeze_layers): model.layers[i].trainable = False
     print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
 
-    # 调整非主干模型first
+    #------------------------------------------------------#
+    #   主干特征提取网络特征通用，冻结训练可以加快训练速度
+    #   也可以在训练初期防止权值被破坏。
+    #   Init_Epoch为起始世代
+    #   Freeze_Epoch为冻结训练的世代
+    #   Epoch总训练世代
+    #   提示OOM或者显存不足请调小Batch_size
+    #------------------------------------------------------#
     if True:
         Init_epoch = 0
         Freeze_epoch = 25
