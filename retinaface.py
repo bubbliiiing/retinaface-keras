@@ -14,6 +14,12 @@ from utils.config import cfg_mnet,cfg_re50
 from utils.utils import BBoxUtility,letterbox_image,retinanet_correct_boxes
 
 class Retinaface(object):
+    #-------------------------------#
+    #   请注意主干网络
+    #   与预训练权重的对应
+    #   即注意修改model_path
+    #   和backbone
+    #-------------------------------#
     _defaults = {
         "model_path": 'model_data/retinaface_mobilenet025.h5',
         "backbone": "mobilenet",
