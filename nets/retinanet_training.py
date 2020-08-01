@@ -187,7 +187,9 @@ def get_random_data(image, targes, input_shape, random=True, jitter=.3, hue=.1, 
         np.random.shuffle(box)
         box[:, [0,2,4,6,8,10,12]] = box[:, [0,2,4,6,8,10,12]]*nw/iw + dx
         box[:, [1,3,5,7,9,11,13]] = box[:, [1,3,5,7,9,11,13]]*nh/ih + dy
-        if flip: box[:, [0,2,4,6,8,10,12]] = w - box[:, [2,0,6,4,8,12,10]]
+        if flip:
+            box[:, [0,2,4,6,8,10,12]] = w - box[:, [2,0,6,4,8,12,10]]
+            box[:, [5,7,9,11,13]]     = box[:, [7,5,9,13,11]]
         box[:, 0:14][box[:, 0:14]<0] = 0
         box[:, [0,2,4,6,8,10,12]][box[:, [0,2,4,6,8,10,12]]>w] = w
         box[:, [1,3,5,7,9,11,13]][box[:, [1,3,5,7,9,11,13]]>h] = h
@@ -195,11 +197,11 @@ def get_random_data(image, targes, input_shape, random=True, jitter=.3, hue=.1, 
         box_w = box[:, 2] - box[:, 0]
         box_h = box[:, 3] - box[:, 1]
         box = box[np.logical_and(box_w>1, box_h>1)] # discard invalid box
-        box_data = box
 
     box[:,4:-1][box[:,-1]==-1]=0
     box[:, [0,2,4,6,8,10,12]] /= w
     box[:, [1,3,5,7,9,11,13]] /= h
+    box_data = box
     return image_data, box_data
 
 class Generator(object):
