@@ -241,7 +241,7 @@ class Generator(object):
     def get_len(self):
         return len(self.imgs_path)
     
-    def generate(self, train=True):
+    def generate(self):
         while True:
             shuffle_index = np.arange(len(self.imgs_path))
             shuffle(shuffle_index)
