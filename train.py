@@ -92,7 +92,7 @@ if __name__ == "__main__":
         Freeze_epoch = 25
         Epoch = 50
         # batch_size大小，每次喂入多少数据
-        batch_size = 4
+        batch_size = 16
         # 最大学习率
         learning_rate_base = 1e-4
 
