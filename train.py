@@ -48,8 +48,8 @@ if __name__ == "__main__":
     logging = TensorBoard(log_dir="logs")
     checkpoint = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}.h5',
         monitor='loss', save_weights_only=True, save_best_only=False, period=1)
-    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=2, verbose=1)
-    early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=6, verbose=1)
+    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=3, verbose=1)
+    early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
 
     for i in range(freeze_layers): model.layers[i].trainable = False
     print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
