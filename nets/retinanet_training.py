@@ -52,16 +52,12 @@ def conf_loss(neg_pos_ratio = 7,negatives_for_hard = 100):
         num_neg = tf.concat(axis=0, values=[num_neg, [(1 - has_min) * negatives_for_hard]])
 
         # --------------------------------------------- #
-        #   从这里往后，与视频中看到的代码有些许不同。
-        #   由于以前的负样本选取方式存在一些问题，
-        #   我对该部分代码进行重构。
         #   求整个batch应该的负样本数量总和
         # --------------------------------------------- #
         num_neg_batch = tf.reduce_sum(tf.boolean_mask(num_neg, tf.greater(num_neg, 0)))
         num_neg_batch = tf.to_int32(num_neg_batch)
 
         # --------------------------------------------- #
-        #   batch_size,8732
         #   把不是背景的概率求和，求和后的概率越大
         #   代表越难分类。
         # --------------------------------------------- #
