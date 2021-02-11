@@ -84,7 +84,7 @@ if __name__ == "__main__":
                 },optimizer=keras.optimizers.Adam(lr=learning_rate_base)
         )
 
-        model.fit_generator(gen.generate(), 
+        model.fit_generator(gen, 
                 steps_per_epoch=gen.get_len()//batch_size,
                 verbose=1,
                 epochs=Freeze_epoch,
