@@ -69,27 +69,27 @@ if __name__ == "__main__":
     #   Epoch总训练世代
     #   提示OOM或者显存不足请调小Batch_size
     #------------------------------------------------------#
-    # if True:
-    #     batch_size = 16
-    #     Init_epoch = 0
-    #     Freeze_epoch = 50
-    #     learning_rate_base = 1e-3
+    if True:
+        batch_size = 8
+        Init_epoch = 0
+        Freeze_epoch = 50
+        learning_rate_base = 1e-3
 
-    #     gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
+        gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
 
-    #     model.compile(loss={
-    #                 'bbox_reg'  : box_smooth_l1(weights=cfg['loc_weight']),
-    #                 'cls'       : conf_loss(),
-    #                 'ldm_reg'   : ldm_smooth_l1()
-    #             },optimizer=keras.optimizers.Adam(lr=learning_rate_base)
-    #     )
+        model.compile(loss={
+                    'bbox_reg'  : box_smooth_l1(weights=cfg['loc_weight']),
+                    'cls'       : conf_loss(),
+                    'ldm_reg'   : ldm_smooth_l1()
+                },optimizer=keras.optimizers.Adam(lr=learning_rate_base)
+        )
 
-    #     model.fit_generator(gen.generate(), 
-    #             steps_per_epoch=gen.get_len()//batch_size,
-    #             verbose=1,
-    #             epochs=Freeze_epoch,
-    #             initial_epoch=Init_epoch,
-    #             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+        model.fit_generator(gen.generate(), 
+                steps_per_epoch=gen.get_len()//batch_size,
+                verbose=1,
+                epochs=Freeze_epoch,
+                initial_epoch=Init_epoch,
+                callbacks=[logging, checkpoint, reduce_lr, early_stopping])
 
     for i in range(freeze_layers): model.layers[i].trainable = True
 
