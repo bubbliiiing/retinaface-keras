@@ -260,7 +260,7 @@ class mAP_Retinaface(Retinaface):
         if self.letterbox_image:
             image = letterbox_image(image, [self.input_shape[1], self.input_shape[0]])
         else:
-            self.anchors = Anchors(self.cfg, image_size=(self.input_shape[0], self.input_shape[1])).get_anchors()
+            self.anchors = Anchors(self.cfg, image_size=(im_height, im_width)).get_anchors()
             
         #-----------------------------------------------------------#
         #   图片预处理，归一化。

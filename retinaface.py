@@ -98,7 +98,7 @@ class Retinaface(object):
         if self.letterbox_image:
             image = letterbox_image(image, [self.input_shape[1], self.input_shape[0]])
         else:
-            self.anchors = Anchors(self.cfg, image_size=(self.input_shape[0], self.input_shape[1])).get_anchors()
+            self.anchors = Anchors(self.cfg, image_size=(im_height, im_width)).get_anchors()
             
         #-----------------------------------------------------------#
         #   图片预处理，归一化。
@@ -146,4 +146,3 @@ class Retinaface(object):
             cv2.circle(old_image, (b[11], b[12]), 1, (0, 255, 0), 4)
             cv2.circle(old_image, (b[13], b[14]), 1, (255, 0, 0), 4)
         return old_image
-

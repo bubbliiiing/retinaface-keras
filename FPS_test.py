@@ -33,7 +33,7 @@ class FPS_Retinaface(Retinaface):
         if self.letterbox_image:
             image = letterbox_image(image, [self.input_shape[1], self.input_shape[0]])
         else:
-            self.anchors = Anchors(self.cfg, image_size=(self.input_shape[0], self.input_shape[1])).get_anchors()
+            self.anchors = Anchors(self.cfg, image_size=(im_height, im_width)).get_anchors()
             
         photo = np.expand_dims(preprocess_input(image),0)
         preds = self.retinaface.predict(photo)
