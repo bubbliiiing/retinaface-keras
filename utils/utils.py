@@ -1,9 +1,10 @@
 import math
+from functools import reduce
+
+import cv2
 import keras
 import numpy as np
 import tensorflow as tf
-from PIL import Image
-from functools import reduce
 
 
 def compose(*funcs):
@@ -12,62 +13,35 @@ def compose(*funcs):
     else:
         raise ValueError('Composition of empty sequence not supported.')
 
-
 def letterbox_image(image, size):
-    iw, ih = image.size
+    ih, iw, _ = np.shape(image)
     w, h = size
     scale = min(w/iw, h/ih)
     nw = int(iw*scale)
     nh = int(ih*scale)
 
-    image = image.resize((nw,nh), Image.BICUBIC)
-    new_image = Image.new('RGB', size, (128,128,128))
-    new_image.paste(image, ((w-nw)//2, (h-nh)//2))
-    x_offset,y_offset = (w-nw)//2/300, (h-nh)//2/300
-    return new_image,x_offset,y_offset
+    image = cv2.resize(image, (nw,nh))
+    new_image = np.ones([size[1],size[0],3])*128
+    new_image[(h-nh)//2:nh+(h-nh)//2, (w-nw)//2:nw+(w-nw)//2] = image
+    return new_image
 
-def retinanet_correct_boxes(top, left, bottom, right, input_shape, image_shape):
+def retinaface_correct_boxes(result, input_shape, image_shape):
     new_shape = image_shape*np.min(input_shape/image_shape)
 
     offset = (input_shape-new_shape)/2./input_shape
     scale = input_shape/new_shape
+    
+    scale_for_boxs = [scale[1], scale[0], scale[1], scale[0]]
+    scale_for_landmarks = [scale[1], scale[0], scale[1], scale[0], scale[1], scale[0], scale[1], scale[0], scale[1], scale[0]]
 
-    box_yx = np.concatenate(((top+bottom)/2,(left+right)/2),axis=-1)
-    box_hw = np.concatenate((bottom-top,right-left),axis=-1)
+    offset_for_boxs = [offset[1], offset[0], offset[1],offset[0]]
+    offset_for_landmarks = [offset[1], offset[0], offset[1], offset[0], offset[1], offset[0], offset[1], offset[0], offset[1], offset[0]]
 
-    box_yx = (box_yx - offset) * scale
-    box_hw *= scale
+    result[:,:4] = (result[:,:4] - np.array(offset_for_boxs)) * np.array(scale_for_boxs)
+    result[:,5:] = (result[:,5:] - np.array(offset_for_landmarks)) * np.array(scale_for_landmarks)
 
-    box_mins = box_yx - (box_hw / 2.)
-    box_maxes = box_yx + (box_hw / 2.)
-    boxes =  np.concatenate([
-        box_mins[:, 0:1],
-        box_mins[:, 1:2],
-        box_maxes[:, 0:1],
-        box_maxes[:, 1:2]
-    ],axis=-1)
-    print(np.shape(boxes))
-    boxes *= np.concatenate([image_shape, image_shape],axis=-1)
-    return boxes
-
-class PriorProbability(keras.initializers.Initializer):
-    """ Apply a prior probability to the weights.
-    """
-
-    def __init__(self, probability=0.01):
-        self.probability = probability
-
-    def get_config(self):
-        return {
-            'probability': self.probability
-        }
-
-    def __call__(self, shape, dtype=None):
-        # set bias to -log((1 - p)/p) for foreground
-        result = np.ones(shape, dtype=dtype) * -math.log((1 - self.probability) / self.probability)
-
-        return result
-
+    return result
+    
 class BBoxUtility(object):
     def __init__(self, priors=None, overlap_threshold=0.35,
                  nms_thresh=0.45):
@@ -98,9 +72,10 @@ class BBoxUtility(object):
     def encode_box(self, box, return_iou=True):
         iou = self.iou(box[:4])
 
-        encoded_box = np.zeros((self.num_priors, 4 + return_iou + 10))
-
-        # 找到每一个真实框，重合程度较高的先验框
+        encoded_box = np.zeros((self.num_priors, 4 + return_iou + 10 + 1))
+        #---------------------------------------------------#
+        #   找到每一个真实框，重合程度较高的先验框
+        #---------------------------------------------------#
         assign_mask = iou > self.overlap_threshold
         if not assign_mask.any():
             assign_mask[iou.argmax()] = True
@@ -110,16 +85,23 @@ class BBoxUtility(object):
         # 找到对应的先验框
         assigned_priors = self.priors[assign_mask]
 
-        # 先计算真实框的中心与长宽
+        #----------------------------------------------------#
+        #   逆向编码，将真实框转化为Retinaface预测结果的格式
+        #   先计算真实框的中心与长宽
+        #----------------------------------------------------#
         box_center = 0.5 * (box[:2] + box[2:4])
         box_wh = box[2:4] - box[:2]
-        # 再计算重合度较高的先验框的中心与长宽
+        #---------------------------------------------#
+        #   再计算重合度较高的先验框的中心与长宽
+        #---------------------------------------------#
         assigned_priors_center = 0.5 * (assigned_priors[:, :2] +
                                         assigned_priors[:, 2:4])
         assigned_priors_wh = (assigned_priors[:, 2:4] -
                               assigned_priors[:, :2])
 
-        # 逆向求取efficientdet应该有的预测结果
+        #------------------------------------------------#
+        #   逆向求取应该有的预测结果
+        #------------------------------------------------#
         encoded_box[:, :2][assign_mask] = box_center - assigned_priors_center
         encoded_box[:, :2][assign_mask] /= assigned_priors_wh
         encoded_box[:, :2][assign_mask] /= 0.1
@@ -127,8 +109,8 @@ class BBoxUtility(object):
         encoded_box[:, 2:4][assign_mask] = np.log(box_wh / assigned_priors_wh)
         encoded_box[:, 2:4][assign_mask] /= 0.2
 
-        ldm_encoded = np.zeros_like(encoded_box[:, 5:][assign_mask])
-        ldm_encoded = np.reshape(ldm_encoded,[-1,5,2])
+        ldm_encoded = np.zeros_like(encoded_box[:, 5:-1][assign_mask])
+        ldm_encoded = np.reshape(ldm_encoded, [-1,5,2])
 
         ldm_encoded[:, :, 0] = box[[4,6,8,10,12]] - np.repeat(assigned_priors_center[:,0:1],5,axis=-1)
         ldm_encoded[:, :, 1] = box[[5,7,9,11,13]] - np.repeat(assigned_priors_center[:,1:2],5,axis=-1)
@@ -139,48 +121,49 @@ class BBoxUtility(object):
         ldm_encoded[:, :, 0] /= 0.1
         ldm_encoded[:, :, 1] /= 0.1
 
-        encoded_box[:, 5:][assign_mask] = np.reshape(ldm_encoded,[-1,10])
-        # print(encoded_box[assign_mask])
+        encoded_box[:, 5:-1][assign_mask] = np.reshape(ldm_encoded,[-1,10])
+        encoded_box[:, -1][assign_mask] = box[-1]
         return encoded_box.ravel()
 
     def assign_boxes(self, boxes):
         assignment = np.zeros((self.num_priors, 4 + 1 + 2 + 1 + 10 + 1))
-        assignment[:,5] = 1
+        #---------------------------------#
+        #   序号为5的地方是为背景的概率
+        #---------------------------------#
+        assignment[:, 5] = 1
         if len(boxes) == 0:
             return assignment
             
-        # (n, num_priors, 5)
+        #-------------------------------------#
+        #   每一个真实框的编码后的值，和iou
+        #   encoded_boxes   n, num_priors, 15
+        #-------------------------------------#
         encoded_boxes = np.apply_along_axis(self.encode_box, 1, boxes)
-        # 每一个真实框的编码后的值，和iou
-        # (n, num_priors)
-        encoded_boxes = encoded_boxes.reshape(-1, self.num_priors, 15)
+        encoded_boxes = encoded_boxes.reshape(-1, self.num_priors, 16)
 
-        # 取重合程度最大的先验框，并且获取这个先验框的index
-        # (num_priors)
+        #-----------------------------------------------------#
+        #   取重合程度最大的先验框，并且获取这个先验框的index
+        #   num_priors,
+        #-----------------------------------------------------#
         best_iou = encoded_boxes[:, :, 4].max(axis=0)
-        # (num_priors)
         best_iou_idx = encoded_boxes[:, :, 4].argmax(axis=0)
-        # (num_priors)
         best_iou_mask = best_iou > 0
-        # 某个先验框它属于哪个真实框
         best_iou_idx = best_iou_idx[best_iou_mask]
 
         assign_num = len(best_iou_idx)
-        # 保留重合程度最大的先验框的应该有的预测结果
-        # 哪些先验框存在真实框
+        # 将编码后的真实框取出
         encoded_boxes = encoded_boxes[:, best_iou_mask, :]
-
-        assignment[:, :4][best_iou_mask] = encoded_boxes[best_iou_idx,np.arange(assign_num),:4]
+        assignment[:, :4][best_iou_mask] = encoded_boxes[best_iou_idx, np.arange(assign_num), :4]
+        #----------------------------------------------------------#
+        #   4、7和-1代表为当前先验框是否包含目标
+        #----------------------------------------------------------#
         assignment[:, 4][best_iou_mask] = 1
 
         assignment[:, 5][best_iou_mask] = 0
         assignment[:, 6][best_iou_mask] = 1
         assignment[:, 7][best_iou_mask] = 1
 
-        assignment[:, 8:-1][best_iou_mask] = encoded_boxes[best_iou_idx,np.arange(assign_num),5:]
-        assignment[:, -1][best_iou_mask] = boxes[best_iou_idx, -1]
-        # 通过assign_boxes我们就获得了，输入进来的这张图片，应该有的预测结果是什么样子的
-
+        assignment[:, 8:][best_iou_mask] = encoded_boxes[best_iou_idx, np.arange(assign_num), 5:]
         return assignment
 
     def decode_boxes(self, mbox_loc, mbox_ldm, mbox_priorbox):
@@ -209,16 +192,16 @@ class BBoxUtility(object):
         decode_bbox_xmax = decode_bbox_center_x + 0.5 * decode_bbox_width
         decode_bbox_ymax = decode_bbox_center_y + 0.5 * decode_bbox_height
 
-        prior_width = np.expand_dims(prior_width,-1)
-        prior_height = np.expand_dims(prior_height,-1)
-        prior_center_x = np.expand_dims(prior_center_x,-1)
-        prior_center_y = np.expand_dims(prior_center_y,-1)
+        prior_width = np.expand_dims(prior_width, -1)
+        prior_height = np.expand_dims(prior_height, -1)
+        prior_center_x = np.expand_dims(prior_center_x, -1)
+        prior_center_y = np.expand_dims(prior_center_y, -1)
 
-        mbox_ldm = mbox_ldm.reshape([-1,5,2])
+        # 对先验框的中心进行调整获得五个人脸关键点
+        mbox_ldm = mbox_ldm.reshape([-1, 5, 2])
         decode_ldm = np.zeros_like(mbox_ldm)
-        decode_ldm[:,:,0] = np.repeat(prior_width,5,axis=-1)*mbox_ldm[:,:,0]*0.1 + np.repeat(prior_center_x,5,axis=-1)
-        decode_ldm[:,:,1] = np.repeat(prior_height,5,axis=-1)*mbox_ldm[:,:,1]*0.1 + np.repeat(prior_center_y,5,axis=-1)
-
+        decode_ldm[:,:,0] = np.repeat(prior_width, 5, axis=-1) * mbox_ldm[:,:,0] * 0.1 + np.repeat(prior_center_x, 5, axis=-1)
+        decode_ldm[:,:,1] = np.repeat(prior_height, 5, axis=-1) * mbox_ldm[:,:,1] * 0.1 + np.repeat(prior_center_y, 5, axis=-1)
 
         # 真实框的左上角与右下角进行堆叠
         decode_bbox = np.concatenate((decode_bbox_xmin[:, None],
@@ -231,23 +214,40 @@ class BBoxUtility(object):
         return decode_bbox
 
     def detection_out(self, predictions, mbox_priorbox, confidence_threshold=0.4):
-        
-        # 网络预测的结果
+        #---------------------------------------------------#
+        #   mbox_loc是回归预测结果
+        #---------------------------------------------------#
         mbox_loc = predictions[0][0]
-        # 置信度
+        #---------------------------------------------------#
+        #   mbox_conf是人脸种类预测结果
+        #---------------------------------------------------#
         mbox_conf = predictions[1][0][:,1:2]
-        # ldm的调整情况
+        #---------------------------------------------------#
+        #   mbox_ldm是人脸关键点预测结果
+        #---------------------------------------------------#
         mbox_ldm = predictions[2][0]
         
+        #--------------------------------------------------------------------------------------------#
+        #   decode_bbox   
+        #   num_anchors, 4 + 10 (4代表预测框的左上角右下角，10代表人脸关键点的坐标)
+        #--------------------------------------------------------------------------------------------#
         decode_bbox = self.decode_boxes(mbox_loc, mbox_ldm, mbox_priorbox)
 
+        #---------------------------------------------------#
+        #   conf_mask    num_anchors, 哪些先验框包含人脸
+        #---------------------------------------------------#
         conf_mask = (mbox_conf >= confidence_threshold)[:,0]
 
-        detection = np.concatenate((decode_bbox[conf_mask][:,:4], mbox_conf[conf_mask], decode_bbox[conf_mask][:,4:]), -1)
+        #---------------------------------------------------#
+        #   将预测框左上角右下角，置信度，人脸关键点堆叠起来
+        #---------------------------------------------------#
+        detection = np.concatenate((decode_bbox[conf_mask][:, :4], mbox_conf[conf_mask], decode_bbox[conf_mask][:, 4:]), -1)
 
         best_box = []
-        scores = detection[:,4]
-        # 根据得分对该种类进行从大到小排序。
+        scores = detection[:, 4]
+        #---------------------------------------------------#
+        #   根据得分对该种类进行从大到小排序。
+        #---------------------------------------------------#
         arg_sort = np.argsort(scores)[::-1]
         detection = detection[arg_sort]
         while np.shape(detection)[0]>0:
@@ -255,9 +255,8 @@ class BBoxUtility(object):
             best_box.append(detection[0])
             if len(detection) == 1:
                 break
-            ious = iou(best_box[-1],detection[1:])
+            ious = iou(best_box[-1], detection[1:])
             detection = detection[1:][ious<self._nms_thresh]
-
         return best_box
 
 def iou(b1,b2):

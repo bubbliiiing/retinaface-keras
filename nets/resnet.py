@@ -3,19 +3,17 @@
 #-------------------------------------------------------------#
 from __future__ import print_function
 
+import keras.backend as K
 import numpy as np
 from keras import layers
-
-from keras.layers import Input
-from keras.layers import Dense,Conv2D,MaxPooling2D,ZeroPadding2D,AveragePooling2D
-from keras.layers import Activation,BatchNormalization,Flatten
+from keras.applications.imagenet_utils import (decode_predictions,
+                                               preprocess_input)
+from keras.layers import (Activation, AveragePooling2D, BatchNormalization,
+                          Conv2D, Dense, Flatten, Input, MaxPooling2D,
+                          ZeroPadding2D)
 from keras.models import Model
-
 from keras.preprocessing import image
-import keras.backend as K
 from keras.utils.data_utils import get_file
-from keras.applications.imagenet_utils import decode_predictions
-from keras.applications.imagenet_utils import preprocess_input
 
 
 def identity_block(input_tensor, kernel_size, filters, stage, block):

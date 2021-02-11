@@ -1,22 +1,26 @@
 import keras
 import numpy as np
+from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau,
+                             TensorBoard)
 from keras.optimizers import Adam
-from nets.retinaface import RetinaFace
-from nets.retinanet_training import Generator
-from nets.retinanet_training import conf_loss, box_smooth_l1, ldm_smooth_l1
-from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
-from utils.utils import BBoxUtility
-from utils.anchors import Anchors
-from utils.config import cfg_re50, cfg_mnet
 
+from nets.retinaface import RetinaFace
+from nets.retinanet_training import (Generator, box_smooth_l1, conf_loss,
+                                     ldm_smooth_l1)
+from utils.anchors import Anchors
+from utils.config import cfg_mnet, cfg_re50
+from utils.utils import BBoxUtility
 
 if __name__ == "__main__":
+    #--------------------------------#
+    #   获得训练用的人脸标签与坐标
+    #--------------------------------#
+    training_dataset_path = './data/widerface/train/label.txt'
     #-------------------------------#
     #   主干特征提取网络的选择
     #   mobilenet或者resnet50
     #-------------------------------#
     backbone = "mobilenet"
-    training_dataset_path = './data/widerface/train/label.txt'
 
     if backbone == "mobilenet":
         cfg = cfg_mnet
@@ -27,16 +31,14 @@ if __name__ == "__main__":
     else:
         raise ValueError('Unsupported backbone - `{}`, Use mobilenet, resnet50.'.format(backbone))
 
-    img_dim = cfg['image_size']
-
-    #-------------------------------#
-    #   创立模型
-    #   请注意主干网络与预训练权重的
-    #   对应
-    #-------------------------------#
+    img_dim = cfg['train_image_size']
+    #--------------------------------------#
+    #   载入模型与权值
+    #   请注意主干网络与预训练权重的对应
+    #--------------------------------------#
     model = RetinaFace(cfg, backbone=backbone)
     model_path = "model_data/retinaface_mobilenet025.h5"
-    model.load_weights(model_path,by_name=True,skip_mismatch=True)
+    model.load_weights(model_path, by_name=True, skip_mismatch=True)
 
     #-------------------------------#
     #   获得先验框和工具箱
@@ -44,10 +46,15 @@ if __name__ == "__main__":
     anchors = Anchors(cfg, image_size=(img_dim, img_dim)).get_anchors()
     bbox_util = BBoxUtility(anchors)
 
-    # 训练参数设置
+    #-------------------------------------------------------------------------------#
+    #   训练参数的设置
+    #   logging表示tensorboard的保存地址
+    #   checkpoint用于设置权值保存的细节，period用于修改多少epoch保存一次
+    #   reduce_lr用于设置学习率下降的方式
+    #   early_stopping用于设定早停，val_loss多次不下降自动结束训练，表示模型基本收敛
+    #-------------------------------------------------------------------------------#
     logging = TensorBoard(log_dir="logs")
-    checkpoint = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}.h5',
-        monitor='loss', save_weights_only=True, save_best_only=False, period=1)
+    checkpoint = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}.h5', monitor='loss', save_weights_only=True, save_best_only=False, period=1)
     reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
 
@@ -62,50 +69,46 @@ if __name__ == "__main__":
     #   Epoch总训练世代
     #   提示OOM或者显存不足请调小Batch_size
     #------------------------------------------------------#
-    if True:
-        Init_epoch = 0
-        Freeze_epoch = 25
-        # batch_size大小，每次喂入多少数据
-        batch_size = 8
-        # 最大学习率
-        learning_rate_base = 1e-3
+    # if True:
+    #     batch_size = 16
+    #     Init_epoch = 0
+    #     Freeze_epoch = 50
+    #     learning_rate_base = 1e-3
 
-        gen = Generator(training_dataset_path,img_dim,batch_size,bbox_util)
+    #     gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
 
-        model.compile(loss={
-                    'bbox_reg'  : box_smooth_l1(),
-                    'cls'       : conf_loss(),
-                    'ldm_reg'   : ldm_smooth_l1()
-                },optimizer=keras.optimizers.Adam(lr=learning_rate_base)
-        )
+    #     model.compile(loss={
+    #                 'bbox_reg'  : box_smooth_l1(weights=cfg['loc_weight']),
+    #                 'cls'       : conf_loss(),
+    #                 'ldm_reg'   : ldm_smooth_l1()
+    #             },optimizer=keras.optimizers.Adam(lr=learning_rate_base)
+    #     )
 
-        model.fit_generator(gen.generate(), 
-                steps_per_epoch=gen.get_len()//batch_size,
-                verbose=1,
-                epochs=Freeze_epoch,
-                initial_epoch=Init_epoch,
-                callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+    #     model.fit_generator(gen.generate(), 
+    #             steps_per_epoch=gen.get_len()//batch_size,
+    #             verbose=1,
+    #             epochs=Freeze_epoch,
+    #             initial_epoch=Init_epoch,
+    #             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
 
     for i in range(freeze_layers): model.layers[i].trainable = True
 
     if True:
-        Freeze_epoch = 25
-        Epoch = 50
-        # batch_size大小，每次喂入多少数据
         batch_size = 4
-        # 最大学习率
+        Freeze_epoch = 50
+        Epoch = 100
         learning_rate_base = 1e-4
 
-        gen = Generator(training_dataset_path,img_dim,batch_size,bbox_util)
+        gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
         
         model.compile(loss={
-                    'bbox_reg'  : box_smooth_l1(),
+                    'bbox_reg'  : box_smooth_l1(weights=cfg['loc_weight']),
                     'cls'       : conf_loss(),
                     'ldm_reg'   : ldm_smooth_l1()
                 },optimizer=keras.optimizers.Adam(lr=learning_rate_base)
         )
 
-        model.fit_generator(gen.generate(), 
+        model.fit_generator(gen, 
                 steps_per_epoch=gen.get_len()//batch_size,
                 verbose=1,
                 epochs=Epoch,

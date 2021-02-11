@@ -1,9 +1,18 @@
 import warnings
-import numpy as np
-from keras.models import Model
-from keras.layers import DepthwiseConv2D,Input,Activation,Dropout,Reshape,BatchNormalization,GlobalAveragePooling2D,GlobalMaxPooling2D,Conv2D
-from keras import backend as K
 
+import numpy as np
+from keras import backend as K
+from keras.layers import (Activation, BatchNormalization, Conv2D,
+                          DepthwiseConv2D, Dropout, GlobalAveragePooling2D,
+                          GlobalMaxPooling2D, Input, Reshape)
+from keras.models import Model
+
+def relu6(x):
+    return K.relu(x, max_value=6)
+
+#----------------------------------#
+#   普通的卷积块
+#----------------------------------#
 def _conv_block(inputs, filters, kernel=(3, 3), strides=(1, 1)):
     x = Conv2D(filters, kernel,
                padding='same',
@@ -13,17 +22,17 @@ def _conv_block(inputs, filters, kernel=(3, 3), strides=(1, 1)):
     x = BatchNormalization(name='conv1_bn')(x)
     return Activation(relu6, name='conv1_relu')(x)
 
-
+#----------------------------------#
+#   深度可分离卷积块
+#----------------------------------#
 def _depthwise_conv_block(inputs, pointwise_conv_filters,
                           depth_multiplier=1, strides=(1, 1), block_id=1):
-
     x = DepthwiseConv2D((3, 3),
                         padding='same',
                         depth_multiplier=depth_multiplier,
                         strides=strides,
                         use_bias=False,
                         name='conv_dw_%d' % block_id)(inputs)
-
     x = BatchNormalization(name='conv_dw_%d_bn' % block_id)(x)
     x = Activation(relu6, name='conv_dw_%d_relu' % block_id)(x)
 
@@ -35,12 +44,10 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters,
     x = BatchNormalization(name='conv_pw_%d_bn' % block_id)(x)
     return Activation(relu6, name='conv_pw_%d_relu' % block_id)(x)
 
-def relu6(x):
-    return K.relu(x, max_value=6)
-
 def MobileNet(img_input, depth_multiplier=1):
     # 640,640,3 -> 320,320,8
     x = _conv_block(img_input, 8, strides=(2, 2))
+    
     # 320,320,8 -> 320,320,16
     x = _depthwise_conv_block(x, 16, depth_multiplier, block_id=1)
 
@@ -66,7 +73,6 @@ def MobileNet(img_input, depth_multiplier=1):
     x = _depthwise_conv_block(x, 256, depth_multiplier, strides=(2, 2), block_id=12)
     x = _depthwise_conv_block(x, 256, depth_multiplier, block_id=13)
     feat3 = x
-
     return feat1, feat2, feat3
 
 
