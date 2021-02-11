@@ -3,7 +3,6 @@ import time
 
 import keras
 import numpy as np
-import torch
 import tqdm
 from keras import backend as K
 from keras.applications.imagenet_utils import preprocess_input
@@ -52,20 +51,19 @@ class FPS_Retinaface(Retinaface):
             
         t1 = time.time()
         for _ in range(test_interval):
-            with torch.no_grad():
-                preds = self.retinaface.predict(photo)
-                results = self.bbox_util.detection_out(preds, self.anchors, confidence_threshold=self.confidence)
+            preds = self.retinaface.predict(photo)
+            results = self.bbox_util.detection_out(preds, self.anchors, confidence_threshold=self.confidence)
 
-                if len(results)>0:
-                    results = np.array(results)
-                    #---------------------------------------------------------#
-                    #   如果使用了letterbox_image的话，要把灰条的部分去除掉。
-                    #---------------------------------------------------------#
-                    if self.letterbox_image:
-                        results = retinaface_correct_boxes(results, np.array([self.input_shape[0], self.input_shape[1]]), np.array([im_height, im_width]))
-                    
-                    results[:,:4] = results[:,:4]*scale
-                    results[:,5:] = results[:,5:]*scale_for_landmarks
+            if len(results)>0:
+                results = np.array(results)
+                #---------------------------------------------------------#
+                #   如果使用了letterbox_image的话，要把灰条的部分去除掉。
+                #---------------------------------------------------------#
+                if self.letterbox_image:
+                    results = retinaface_correct_boxes(results, np.array([self.input_shape[0], self.input_shape[1]]), np.array([im_height, im_width]))
+                
+                results[:,:4] = results[:,:4]*scale
+                results[:,5:] = results[:,5:]*scale_for_landmarks
         t2 = time.time()
         tact_time = (t2 - t1) / test_interval
         return tact_time
