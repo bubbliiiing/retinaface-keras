@@ -14,8 +14,8 @@
 ## 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | Easy | Medium | Hard |
 | :-----: | :-----: | :------: | :------: | :------: | :-----: | :-----: |
-| Widerface-Train | [Retinaface_mobilenet0.25.h5](https://github.com/bubbliiiing/retinaface-keras/releases/download/v1.0/Retinaface_mobilenet0.25.h5) | Widerface-Val | 1280x1280 | 86.21% | 84.07% | 71.66% |
-| Widerface-Train | [Retinaface_resnet50.h5](https://github.com/bubbliiiing/retinaface-keras/releases/download/v1.0/Retinaface_resnet50.h5) | Widerface-Val | 1280x1280 | 93.40% | 91.71% | 83.05% |
+| Widerface-Train | Retinaface_mobilenet0.25.h5 | Widerface-Val | 1280x1280 | 86.21% | 84.07% | 71.66% |
+| Widerface-Train | Retinaface_resnet50.h5 | Widerface-Val | 1280x1280 | 93.40% | 91.71% | 83.05% |
 
 ## 注意事项
 本库下载过来可以直接进行预测，已经在model_data文件夹下存放了retinaface_mobilenet025.h5文件，可用于预测。  
