@@ -22,8 +22,8 @@ from utils.utils import BBoxUtility, letterbox_image, retinaface_correct_boxes
 #------------------------------------#
 class Retinaface(object):
     _defaults = {
-        "model_path"        : 'model_data/retinaface_mobilenet025.h5',
-        "backbone"          : 'mobilenet',
+        "model_path"        : 'model_data/retinaface_resnet50.h5',
+        "backbone"          : 'resnet50',
         "confidence"        : 0.5,
         "nms_iou"           : 0.45,
         #----------------------------------------------------------------------#

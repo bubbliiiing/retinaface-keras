@@ -9,7 +9,7 @@ from nets.retinanet_training import (Generator, box_smooth_l1, conf_loss,
                                      ldm_smooth_l1)
 from utils.anchors import Anchors
 from utils.config import cfg_mnet, cfg_re50
-from utils.utils import BBoxUtility
+from utils.utils import BBoxUtility, ExponentDecayScheduler
 
 if __name__ == "__main__":
     #--------------------------------#
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     #-------------------------------------------------------------------------------#
     logging = TensorBoard(log_dir="logs")
     checkpoint = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}.h5', monitor='loss', save_weights_only=True, save_best_only=False, period=1)
-    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=3, verbose=1)
+    reduce_lr = ExponentDecayScheduler(decay_rate=0.92, verbose=1)
     early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
 
     for i in range(freeze_layers): model.layers[i].trainable = False
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         batch_size = 8
         Init_epoch = 0
         Freeze_epoch = 50
-        learning_rate_base = 1e-3
+        learning_rate_base = 1e-5
 
         gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
 

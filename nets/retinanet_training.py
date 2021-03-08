@@ -1,4 +1,4 @@
-
+import random
 from random import shuffle
 import math
 import cv2
@@ -52,12 +52,16 @@ def conf_loss(neg_pos_ratio = 7,negatives_for_hard = 100):
         num_neg = tf.concat(axis=0, values=[num_neg, [(1 - has_min) * negatives_for_hard]])
 
         # --------------------------------------------- #
+        #   从这里往后，与视频中看到的代码有些许不同。
+        #   由于以前的负样本选取方式存在一些问题，
+        #   我对该部分代码进行重构。
         #   求整个batch应该的负样本数量总和
         # --------------------------------------------- #
         num_neg_batch = tf.reduce_sum(tf.boolean_mask(num_neg, tf.greater(num_neg, 0)))
         num_neg_batch = tf.to_int32(num_neg_batch)
 
         # --------------------------------------------- #
+        #   batch_size,8732
         #   把不是背景的概率求和，求和后的概率越大
         #   代表越难分类。
         # --------------------------------------------- #
@@ -158,7 +162,8 @@ def get_random_data(image, targes, input_shape, jitter=.3, hue=.1, sat=1.5, val=
 
     # 对图像进行缩放并且进行长和宽的扭曲
     new_ar = w/h * rand(1-jitter,1+jitter)/rand(1-jitter,1+jitter)
-    scale = rand(0.25, 2.5)
+    PRE_SCALES = [3.33, 2.22, 1.67, 1.25, 1.0]
+    scale = random.choice(PRE_SCALES)
     if new_ar < 1:
         nh = int(scale*h)
         nw = int(nh*new_ar)
@@ -197,9 +202,15 @@ def get_random_data(image, targes, input_shape, jitter=.3, hue=.1, sat=1.5, val=
         np.random.shuffle(box)
         box[:, [0,2,4,6,8,10,12]] = box[:, [0,2,4,6,8,10,12]]*nw/iw + dx
         box[:, [1,3,5,7,9,11,13]] = box[:, [1,3,5,7,9,11,13]]*nh/ih + dy
-        if flip:
+        if flip: 
             box[:, [0,2,4,6,8,10,12]] = w - box[:, [2,0,6,4,8,12,10]]
             box[:, [5,7,9,11,13]]     = box[:, [7,5,9,13,11]]
+        
+        center_x = (box[:, 0] + box[:, 2])/2
+        center_y = (box[:, 1] + box[:, 3])/2
+    
+        box = box[np.logical_and(np.logical_and(center_x>0, center_y>0), np.logical_and(center_x<w, center_y<h))]
+
         box[:, 0:14][box[:, 0:14]<0] = 0
         box[:, [0,2,4,6,8,10,12]][box[:, [0,2,4,6,8,10,12]]>w] = w
         box[:, [1,3,5,7,9,11,13]][box[:, [1,3,5,7,9,11,13]]>h] = h
