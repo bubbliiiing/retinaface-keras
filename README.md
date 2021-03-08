@@ -14,8 +14,8 @@
 ## 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | Easy | Medium | Hard |
 | :-----: | :-----: | :------: | :------: | :------: | :-----: | :-----: |
-| Widerface-Train | retinaface_mobilenet025.h5 | Widerface-Val | 1280x1280 | 86.21% | 84.07% | 71.66% |
-| Widerface-Train | retinaface_resnet50.h5 | Widerface-Val | 1280x1280 | 93.40% | 91.71% | 83.05% |
+| Widerface-Train | retinaface_mobilenet025.h5 | Widerface-Val | 1280x1280 | 88.94% | 86.76% | 73.83% |
+| Widerface-Train | retinaface_resnet50.h5 | Widerface-Val | 1280x1280 | 94.69% | 93.08% | 84.31% |
 
 ## 注意事项
 本库下载过来可以直接进行预测，已经在model_data文件夹下存放了retinaface_mobilenet025.h5文件，可用于预测。  
@@ -27,7 +27,7 @@ keras==2.1.5
 
 ## 文件下载
 训练所需的retinaface_resnet50.h5、resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5等文件可以在百度云下载。     
-链接: https://pan.baidu.com/s/1Ef0vz_W1wPY7iTxFC9J76Q 提取码: q82f     
+链接: https://pan.baidu.com/s/1EBSzTLv3oNBZbyxpHvEDeA 提取码: pbai     
 
 数据集可以在如下连接里下载。      
 链接: https://pan.baidu.com/s/1LIYlK5sVx4qsK9tvEuJ4cw 提取码: 2yvx    
