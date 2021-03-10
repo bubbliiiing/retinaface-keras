@@ -73,7 +73,7 @@ if __name__ == "__main__":
         batch_size = 8
         Init_epoch = 0
         Freeze_epoch = 50
-        learning_rate_base = 1e-5
+        learning_rate_base = 1e-3
 
         gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
 
