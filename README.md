@@ -9,7 +9,7 @@
 5. [预测步骤 How2predict](#预测步骤)
 6. [训练步骤 How2train](#训练步骤)
 7. [评估步骤 Eval](#评估步骤)
-7. [参考资料 Reference](#Reference)
+8. [参考资料 Reference](#Reference)
 
 ## 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | Easy | Medium | Hard |
