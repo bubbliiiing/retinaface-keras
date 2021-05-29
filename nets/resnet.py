@@ -3,17 +3,10 @@
 #-------------------------------------------------------------#
 from __future__ import print_function
 
-import keras.backend as K
-import numpy as np
+from keras.initializers import random_normal
 from keras import layers
-from keras.applications.imagenet_utils import (decode_predictions,
-                                               preprocess_input)
-from keras.layers import (Activation, AveragePooling2D, BatchNormalization,
-                          Conv2D, Dense, Flatten, Input, MaxPooling2D,
+from keras.layers import (Activation, BatchNormalization, Conv2D, MaxPooling2D,
                           ZeroPadding2D)
-from keras.models import Model
-from keras.preprocessing import image
-from keras.utils.data_utils import get_file
 
 
 def identity_block(input_tensor, kernel_size, filters, stage, block):
@@ -23,15 +16,15 @@ def identity_block(input_tensor, kernel_size, filters, stage, block):
     conv_name_base = 'res' + str(stage) + block + '_branch'
     bn_name_base = 'bn' + str(stage) + block + '_branch'
 
-    x = Conv2D(filters1, (1, 1), name=conv_name_base + '2a')(input_tensor)
+    x = Conv2D(filters1, (1, 1), kernel_initializer=random_normal(stddev=0.02), name=conv_name_base + '2a')(input_tensor)
     x = BatchNormalization(name=bn_name_base + '2a')(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters2, kernel_size,padding='same', name=conv_name_base + '2b')(x)
+    x = Conv2D(filters2, kernel_size, padding='same', kernel_initializer=random_normal(stddev=0.02), name=conv_name_base + '2b')(x)
     x = BatchNormalization(name=bn_name_base + '2b')(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters3, (1, 1), name=conv_name_base + '2c')(x)
+    x = Conv2D(filters3, (1, 1), kernel_initializer=random_normal(stddev=0.02), name=conv_name_base + '2c')(x)
     x = BatchNormalization(name=bn_name_base + '2c')(x)
 
     x = layers.add([x, input_tensor])
@@ -46,20 +39,20 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2))
     conv_name_base = 'res' + str(stage) + block + '_branch'
     bn_name_base = 'bn' + str(stage) + block + '_branch'
 
-    x = Conv2D(filters1, (1, 1), strides=strides,
+    x = Conv2D(filters1, (1, 1), strides=strides, kernel_initializer=random_normal(stddev=0.02), 
                name=conv_name_base + '2a')(input_tensor)
     x = BatchNormalization(name=bn_name_base + '2a')(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters2, kernel_size, padding='same',
+    x = Conv2D(filters2, kernel_size, padding='same', kernel_initializer=random_normal(stddev=0.02), 
                name=conv_name_base + '2b')(x)
     x = BatchNormalization(name=bn_name_base + '2b')(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters3, (1, 1), name=conv_name_base + '2c')(x)
+    x = Conv2D(filters3, (1, 1), kernel_initializer=random_normal(stddev=0.02), name=conv_name_base + '2c')(x)
     x = BatchNormalization(name=bn_name_base + '2c')(x)
 
-    shortcut = Conv2D(filters3, (1, 1), strides=strides,
+    shortcut = Conv2D(filters3, (1, 1), strides=strides, kernel_initializer=random_normal(stddev=0.02), 
                       name=conv_name_base + '1')(input_tensor)
     shortcut = BatchNormalization(name=bn_name_base + '1')(shortcut)
 
@@ -73,7 +66,7 @@ def ResNet50(inputs):
     img_input = inputs
     x = ZeroPadding2D((3, 3))(img_input)
 
-    x = Conv2D(64, (7, 7), strides=(2, 2), name='conv1')(x)
+    x = Conv2D(64, (7, 7), strides=(2, 2), kernel_initializer=random_normal(stddev=0.02), name='conv1')(x)
     x = BatchNormalization(name='bn_conv1')(x)
     x = Activation('relu')(x)
 

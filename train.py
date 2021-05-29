@@ -1,15 +1,13 @@
 import keras
-import numpy as np
-from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau,
-                             TensorBoard)
-from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 
 from nets.retinaface import RetinaFace
-from nets.retinanet_training import (Generator, box_smooth_l1, conf_loss,
-                                     ldm_smooth_l1)
+from nets.retinaface_training import (ExponentDecayScheduler, Generator,
+                                      LossHistory, box_smooth_l1, conf_loss,
+                                      ldm_smooth_l1)
 from utils.anchors import Anchors
 from utils.config import cfg_mnet, cfg_re50
-from utils.utils import BBoxUtility, ExponentDecayScheduler
+from utils.utils import BBoxUtility
 
 if __name__ == "__main__":
     #--------------------------------#
@@ -53,10 +51,11 @@ if __name__ == "__main__":
     #   reduce_lr用于设置学习率下降的方式
     #   early_stopping用于设定早停，val_loss多次不下降自动结束训练，表示模型基本收敛
     #-------------------------------------------------------------------------------#
-    logging = TensorBoard(log_dir="logs")
-    checkpoint = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}.h5', monitor='loss', save_weights_only=True, save_best_only=False, period=1)
-    reduce_lr = ExponentDecayScheduler(decay_rate=0.92, verbose=1)
-    early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
+    logging         = TensorBoard(log_dir="logs/")
+    checkpoint      = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}.h5', monitor='loss', save_weights_only=True, save_best_only=False, period=1)
+    reduce_lr       = ExponentDecayScheduler(decay_rate=0.92, verbose=1)
+    early_stopping  = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
+    loss_history    = LossHistory("logs/")
 
     for i in range(freeze_layers): model.layers[i].trainable = False
     print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
@@ -70,10 +69,10 @@ if __name__ == "__main__":
     #   提示OOM或者显存不足请调小Batch_size
     #------------------------------------------------------#
     if True:
-        batch_size = 8
-        Init_epoch = 0
-        Freeze_epoch = 50
-        learning_rate_base = 1e-3
+        batch_size          = 8
+        Init_epoch          = 0
+        Freeze_epoch        = 50
+        learning_rate_base  = 1e-3
 
         gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
 
@@ -89,15 +88,18 @@ if __name__ == "__main__":
                 verbose=1,
                 epochs=Freeze_epoch,
                 initial_epoch=Init_epoch,
-                callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+                # 开启多线程可以加快数据读取的速度。
+                # workers=4,
+                # use_multiprocessing=True,
+                callbacks=[logging, checkpoint, reduce_lr, early_stopping, loss_history])
 
     for i in range(freeze_layers): model.layers[i].trainable = True
 
     if True:
-        batch_size = 4
-        Freeze_epoch = 50
-        Epoch = 100
-        learning_rate_base = 1e-4
+        batch_size          = 4
+        Freeze_epoch        = 50
+        Epoch               = 100
+        learning_rate_base  = 1e-4
 
         gen = Generator(training_dataset_path, img_dim, batch_size, bbox_util)
         
@@ -113,4 +115,6 @@ if __name__ == "__main__":
                 verbose=1,
                 epochs=Epoch,
                 initial_epoch=Freeze_epoch,
-                callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+                # workers=4,
+                # use_multiprocessing=True,
+                callbacks=[logging, checkpoint, reduce_lr, early_stopping, loss_history])

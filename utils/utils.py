@@ -1,11 +1,8 @@
-import math
 from functools import reduce
 
 import cv2
-import keras
 import numpy as np
-import tensorflow as tf
-import keras.backend as K
+
 
 def compose(*funcs):
     if funcs:
@@ -276,19 +273,3 @@ def iou(b1,b2):
     
     iou = inter_area/np.maximum((area_b1+area_b2-inter_area),1e-6)
     return iou
-
-class ExponentDecayScheduler(keras.callbacks.Callback):
-    def __init__(self, decay_rate, verbose=0):
-        super(ExponentDecayScheduler, self).__init__()
-        self.decay_rate = decay_rate
-        self.verbose = verbose
-        self.first_time = True
-
-    def on_epoch_begin(self, batch, logs=None):
-        if self.first_time==False:
-            lr = K.get_value(self.model.optimizer.lr) * self.decay_rate
-            K.set_value(self.model.optimizer.lr, lr)
-            if self.verbose > 0:
-                print('Setting learning rate to %s.' % lr)
-        else:
-            self.first_time==False

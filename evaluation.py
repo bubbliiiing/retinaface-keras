@@ -1,22 +1,14 @@
-import argparse
-import colorsys
 import os
-import pickle
 
 import cv2
-import keras
 import numpy as np
 import tqdm
-from keras import backend as K
 from keras.applications.imagenet_utils import preprocess_input
-from keras.layers import Input
-from PIL import Image, ImageDraw, ImageFont
 from scipy.io import loadmat
 
 from retinaface import Retinaface
 from utils.anchors import Anchors
-from utils.config import cfg_mnet, cfg_re50
-from utils.utils import BBoxUtility, letterbox_image, retinaface_correct_boxes
+from utils.utils import letterbox_image, retinaface_correct_boxes
 
 
 def intersect(box_a, box_b):
@@ -334,15 +326,4 @@ if __name__ == '__main__':
                 fd.write(line)
         
     evaluation(save_folder, gt_dir)
-
-
-
-
-
-
-
-
-
-
-
 

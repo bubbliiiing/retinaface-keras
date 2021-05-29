@@ -1,11 +1,8 @@
-import warnings
-
-import numpy as np
 from keras import backend as K
+from keras.initializers import random_normal
 from keras.layers import (Activation, BatchNormalization, Conv2D,
-                          DepthwiseConv2D, Dropout, GlobalAveragePooling2D,
-                          GlobalMaxPooling2D, Input, Reshape)
-from keras.models import Model
+                          DepthwiseConv2D)
+
 
 def relu6(x):
     return K.relu(x, max_value=6)
@@ -14,7 +11,7 @@ def relu6(x):
 #   普通的卷积块
 #----------------------------------#
 def _conv_block(inputs, filters, kernel=(3, 3), strides=(1, 1)):
-    x = Conv2D(filters, kernel,
+    x = Conv2D(filters, kernel, kernel_initializer=random_normal(stddev=0.02), 
                padding='same',
                use_bias=False,
                strides=strides,
@@ -27,7 +24,7 @@ def _conv_block(inputs, filters, kernel=(3, 3), strides=(1, 1)):
 #----------------------------------#
 def _depthwise_conv_block(inputs, pointwise_conv_filters,
                           depth_multiplier=1, strides=(1, 1), block_id=1):
-    x = DepthwiseConv2D((3, 3),
+    x = DepthwiseConv2D((3, 3), depthwise_initializer=random_normal(stddev=0.02), 
                         padding='same',
                         depth_multiplier=depth_multiplier,
                         strides=strides,
@@ -36,7 +33,7 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters,
     x = BatchNormalization(name='conv_dw_%d_bn' % block_id)(x)
     x = Activation(relu6, name='conv_dw_%d_relu' % block_id)(x)
 
-    x = Conv2D(pointwise_conv_filters, (1, 1),
+    x = Conv2D(pointwise_conv_filters, (1, 1), kernel_initializer=random_normal(stddev=0.02), 
                padding='same',
                use_bias=False,
                strides=(1, 1),
