@@ -55,8 +55,10 @@ def decode_boxes(mbox_loc, mbox_ldm, mbox_priorbox):
     # decode_bbox = np.minimum(np.maximum(decode_bbox, 0.0), 1.0)
     return decode_bbox
 
-img_dim = 640
-anchors = Anchors(cfg_mnet, image_size=(img_dim, img_dim)).get_anchors()
+cfg     = cfg_mnet
+cfg_mnet['image_size'] = 640
+img_dim = cfg_mnet['image_size']
+anchors = Anchors(cfg, image_size=(img_dim, img_dim)).get_anchors()
 anchors = anchors[-800:]*img_dim
 
 center_x = (anchors[:,0]+anchors[:,2])/2
