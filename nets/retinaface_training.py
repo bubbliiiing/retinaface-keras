@@ -281,6 +281,7 @@ class Generator(keras.utils.Sequence):
         target2 = []
         
         for i in range(index*self.batch_size, (index+1)*self.batch_size):  
+            i = i % self.get_len()
             img = Image.open(self.imgs_path[i])
             labels = self.words[i]
             annotations = np.zeros((0, 15))
