@@ -88,7 +88,7 @@ def LandmarkHead(inputs, num_anchors=2):
 
 def RetinaFace(cfg, backbone="mobilenet"):
     inputs = Input(shape=(None, None, 3))
-    #------------------------Retinaface-------------------#
+    #-------------------------------------------#
     #   获得三个shape的有效特征层
     #   分别是C3  80, 80, 64
     #         C4  40, 40, 128
