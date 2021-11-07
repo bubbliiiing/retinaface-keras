@@ -1,3 +1,5 @@
+import keras
+import tensorflow as tf
 from keras.initializers import random_normal
 from keras.layers import Activation, Add, Concatenate, Conv2D, Input, Reshape
 from keras.layers.advanced_activations import LeakyReLU
@@ -5,10 +7,18 @@ from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from utils.utils import compose
 
-from nets.layers import UpsampleLike
-from nets.mobilenet025 import MobileNet
+from nets.mobilenet import MobileNet
 from nets.resnet import ResNet50
 
+
+class UpsampleLike(keras.layers.Layer):
+    def call(self, inputs, **kwargs):
+        source, target = inputs
+        target_shape = keras.backend.shape(target)
+        return tf.image.resize_images(source, (target_shape[1], target_shape[2]), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR, align_corners=False)
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0][0],) + input_shape[1][1:3] + (input_shape[0][-1],)
 
 #---------------------------------------------------#
 #   卷积块
@@ -78,7 +88,7 @@ def LandmarkHead(inputs, num_anchors=2):
 
 def RetinaFace(cfg, backbone="mobilenet"):
     inputs = Input(shape=(None, None, 3))
-    #-------------------------------------------#
+    #------------------------Retinaface-------------------#
     #   获得三个shape的有效特征层
     #   分别是C3  80, 80, 64
     #         C4  40, 40, 128
