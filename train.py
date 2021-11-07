@@ -57,7 +57,12 @@ if __name__ == "__main__":
         raise ValueError('Unsupported backbone - `{}`, Use mobilenet, resnet50.'.format(backbone))
 
     model       = RetinaFace(cfg, backbone=backbone)
-    model.load_weights(model_path, by_name=True, skip_mismatch=True)
+    if model_path != '':
+        #------------------------------------------------------#
+        #   载入预训练权重
+        #------------------------------------------------------#
+        print('Load weights {}.'.format(model_path))
+        model.load_weights(model_path, by_name=True, skip_mismatch=True)
 
     #-------------------------------#
     #   获得先验框和工具箱
