@@ -45,7 +45,7 @@ if __name__ == "__main__":
     #   开启后会加快数据读取速度，但是会占用更多内存
     #   在IO为瓶颈的时候再开启多线程，即GPU运算速度远大于读取图片的速度。
     #-------------------------------------------------------------------#
-    num_workers = 0
+    num_workers = 1
 
     if backbone == "mobilenet":
         cfg             = cfg_mnet
@@ -123,7 +123,7 @@ if __name__ == "__main__":
             steps_per_epoch     = gen.get_len() // batch_size,
             epochs              = Freeze_epoch,
             initial_epoch       = Init_epoch,
-            use_multiprocessing = True if num_workers != 0 else False,
+            use_multiprocessing = True if num_workers > 1 else False,
             workers             = num_workers,
             callbacks           = [logging, checkpoint, reduce_lr, early_stopping, loss_history]
         )
@@ -156,7 +156,7 @@ if __name__ == "__main__":
             steps_per_epoch     = gen.get_len()//batch_size,
             epochs              = Epoch,
             initial_epoch       = Freeze_epoch,
-            use_multiprocessing = True if num_workers != 0 else False,
+            use_multiprocessing = True if num_workers > 1 else False,
             workers             = num_workers,
             callbacks           = [logging, checkpoint, reduce_lr, early_stopping, loss_history]
         )
