@@ -18,7 +18,29 @@ if __name__ == "__main__":
     #   主干特征提取网络的选择
     #   mobilenet或者resnet50
     #-------------------------------#
-    backbone    = "mobilenet"  
+    backbone = "mobilenet"  
+    #----------------------------------------------------------------------------------------------------------------------------#
+    #   权值文件的下载请看README，可以通过网盘下载。模型的 预训练权重 对不同数据集是通用的，因为特征是通用的。
+    #   模型的 预训练权重 比较重要的部分是 主干特征提取网络的权值部分，用于进行特征提取。
+    #   预训练权重对于99%的情况都必须要用，不用的话主干部分的权值太过随机，特征提取效果不明显，网络训练的结果也不会好
+    #
+    #   如果训练过程中存在中断训练的操作，可以将model_path设置成logs文件夹下的权值文件，将已经训练了一部分的权值再次载入。
+    #   同时修改下方的训练参数，来保证模型epoch的连续性。
+    #   
+    #   当model_path = ''的时候不加载整个模型的权值。
+    #
+    #   如果想要让模型从主干的预训练权值开始训练，则设置model_path为主干网络的权值，此时仅加载主干。
+    #   如果想要让模型从0开始训练，则设置model_path = ''，Freeze_Train = Fasle，此时从0开始训练，且没有冻结主干的过程。
+    #   一般来讲，从0开始训练效果会很差，因为权值太过随机，特征提取效果不明显。
+    #
+    #   网络一般不从0开始训练，至少会使用主干部分的权值，有些论文提到可以不用预训练，主要原因是他们 数据集较大 且 调参能力优秀。
+    #   如果一定要训练网络的主干部分，可以了解imagenet数据集，首先训练分类模型，分类模型的 主干部分 和该模型通用，基于此进行训练。
+    #----------------------------------------------------------------------------------------------------------------------------#
+    model_path = "model_data/retinaface_mobilenet025.h5"
+    #-------------------------------------------------------------------#
+    #   是否进行冻结训练，默认先冻结主干训练后解冻训练。
+    #-------------------------------------------------------------------#
+    Freeze_Train = True
     #-------------------------------------------------------------------#
     #   用于设置是否使用多线程读取数据，0代表关闭多线程
     #   开启后会加快数据读取速度，但是会占用更多内存
@@ -35,24 +57,6 @@ if __name__ == "__main__":
     else:
         raise ValueError('Unsupported backbone - `{}`, Use mobilenet, resnet50.'.format(backbone))
 
-    #----------------------------------------------------------------------------------------------------------------------------#
-    #   权值文件的下载请看README，可以通过网盘下载。模型的 预训练权重 对不同数据集是通用的，因为特征是通用的。
-    #   模型的 预训练权重 比较重要的部分是 主干特征提取网络的权值部分，用于进行特征提取。
-    #   预训练权重对于99%的情况都必须要用，不用的话主干部分的权值太过随机，特征提取效果不明显，网络训练的结果也不会好
-    #
-    #   如果训练过程中存在中断训练的操作，可以将model_path设置成logs文件夹下的权值文件，将已经训练了一部分的权值再次载入。
-    #   同时修改下方的训练参数，来保证模型epoch的连续性。
-    #   
-    #   当model_path = ''的时候不加载整个模型的权值。
-    #
-    #   如果想要让模型从主干的预训练权值开始训练，则设置model_path为主干网络的权值，此时仅加载主干。
-    #   如果想要让模型从0开始训练，则设置model_path = ''，此时从0开始训练。
-    #   一般来讲，从0开始训练效果会很差，因为权值太过随机，特征提取效果不明显。
-    #
-    #   网络一般不从0开始训练，至少会使用主干部分的权值，有些论文提到可以不用预训练，主要原因是他们 数据集较大 且 调参能力优秀。
-    #   如果一定要训练网络的主干部分，可以了解imagenet数据集，首先训练分类模型，分类模型的 主干部分 和该模型通用，基于此进行训练。
-    #----------------------------------------------------------------------------------------------------------------------------#
-    model_path  = "model_data/retinaface_mobilenet025.h5"
     model       = RetinaFace(cfg, backbone=backbone)
     model.load_weights(model_path, by_name=True, skip_mismatch=True)
 
@@ -75,8 +79,9 @@ if __name__ == "__main__":
     early_stopping  = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
     loss_history    = LossHistory("logs/")
 
-    for i in range(freeze_layers): model.layers[i].trainable = False
-    print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
+    if Freeze_Train:
+        for i in range(freeze_layers): model.layers[i].trainable = False
+        print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
 
     #---------------------------------------------------------#
     #   训练分为两个阶段，分别是冻结阶段和解冻阶段。
@@ -119,7 +124,8 @@ if __name__ == "__main__":
             callbacks           = [logging, checkpoint, reduce_lr, early_stopping, loss_history]
         )
 
-    for i in range(freeze_layers): model.layers[i].trainable = True
+    if Freeze_Train:
+        for i in range(freeze_layers): model.layers[i].trainable = True
 
     if True:
         #----------------------------------------------------#
