@@ -187,15 +187,15 @@ if __name__ == "__main__":
         #   logging         用于设置tensorboard的保存地址
         #   checkpoint      用于设置权值保存的细节，period用于修改多少epoch保存一次
         #   lr_scheduler       用于设置学习率下降的方式
-        #   early_stopping  用于设定早停，val_loss多次不下降自动结束训练，表示模型基本收敛
+        #   early_stopping  用于设定早停，loss多次不下降自动结束训练，表示模型基本收敛
         #-------------------------------------------------------------------------------#
         time_str        = datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')
         log_dir         = os.path.join('logs', "loss_" + str(time_str))
         logging         = TensorBoard(log_dir)
         loss_history    = LossHistory(log_dir)
-        checkpoint      = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
-                                monitor = 'val_loss', save_weights_only = True, save_best_only = False, period = save_period)
-        early_stopping  = EarlyStopping(monitor='val_loss', min_delta = 0, patience = 10, verbose = 1)
+        checkpoint      = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}.h5',
+                                monitor = 'loss', save_weights_only = True, save_best_only = False, period = save_period)
+        early_stopping  = EarlyStopping(monitor='loss', min_delta = 0, patience = 10, verbose = 1)
         lr_scheduler    = LearningRateScheduler(lr_scheduler_func, verbose = 1)
         callbacks       = [logging, loss_history, checkpoint, lr_scheduler, early_stopping]
 
