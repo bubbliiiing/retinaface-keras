@@ -93,7 +93,7 @@ class Generator(keras.utils.Sequence):
     def rand(self, a=0, b=1):
         return np.random.rand()*(b-a) + a
 
-    def get_random_data(self, image, targes, input_shape, jitter=.3, hue=.1, sat=1.5, val=1.5):
+    def get_random_data(self, image, targes, input_shape, jitter=.3, hue=.1, sat=0.7, val=0.4):
         iw, ih  = image.size
         h, w    = input_shape
         box     = targes
@@ -101,8 +101,8 @@ class Generator(keras.utils.Sequence):
         #------------------------------------------#
         #   对图像进行缩放并且进行长和宽的扭曲
         #------------------------------------------#
-        new_ar = w/h * self.rand(1-jitter,1+jitter) / self.rand(1-jitter,1+jitter)
-        PRE_SCALES = [3.33, 2.22, 1.67, 1.25, 1.0]
+        new_ar      = iw/ih * self.rand(1-jitter,1+jitter) / self.rand(1-jitter,1+jitter)
+        PRE_SCALES  = [3.33, 2.22, 1.67, 1.25, 1.0]
         scale = random.choice(PRE_SCALES)
         if new_ar < 1:
             nh = int(scale*h)
