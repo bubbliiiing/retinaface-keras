@@ -1,8 +1,6 @@
 import datetime
 import os
 
-import keras
-import keras.backend as K
 from keras.callbacks import (EarlyStopping, LearningRateScheduler,
                              ModelCheckpoint, TensorBoard)
 from keras.layers import Conv2D, Dense, DepthwiseConv2D
@@ -16,7 +14,7 @@ from utils.anchors import Anchors
 from utils.callbacks import ExponentDecayScheduler, LossHistory
 from utils.config import cfg_mnet, cfg_re50
 from utils.dataloader import Generator
-from utils.utils import BBoxUtility
+from utils.utils_bbox import BBoxUtility
 
 if __name__ == "__main__":
     #--------------------------------#
@@ -39,13 +37,27 @@ if __name__ == "__main__":
     #
     #   如果想要让模型从主干的预训练权值开始训练，则设置model_path为主干网络的权值，此时仅加载主干。
     #   如果想要让模型从0开始训练，则设置model_path = ''，Freeze_Train = Fasle，此时从0开始训练，且没有冻结主干的过程。
-    #   一般来讲，从0开始训练效果会很差，因为权值太过随机，特征提取效果不明显。
-    #
-    #   网络一般不从0开始训练，至少会使用主干部分的权值，有些论文提到可以不用预训练，主要原因是他们 数据集较大 且 调参能力优秀。
-    #   如果一定要训练网络的主干部分，可以了解imagenet数据集，首先训练分类模型，分类模型的 主干部分 和该模型通用，基于此进行训练。
+    #   
+    #   一般来讲，网络从0开始的训练效果会很差，因为权值太过随机，特征提取效果不明显，因此非常、非常、非常不建议大家从0开始训练！
+    #   如果一定要从0开始，可以了解imagenet数据集，首先训练分类模型，获得网络的主干部分权值，分类模型的 主干部分 和该模型通用，基于此进行训练。
     #----------------------------------------------------------------------------------------------------------------------------#
-    model_path = "model_data/retinaface_mobilenet025.h5"
+    model_path = "model_data/mobilenet_2_5_224_tf_no_top.h5"
     
+    #----------------------------------------------------------------------------------------------------------------------------#
+    #   训练分为两个阶段，分别是冻结阶段和解冻阶段。设置冻结阶段是为了满足机器性能不足的同学的训练需求。
+    #   冻结训练需要的显存较小，显卡非常差的情况下，可设置Freeze_Epoch等于UnFreeze_Epoch，此时仅仅进行冻结训练。
+    #      
+    #   在此提供若干参数设置建议，各位训练者根据自己的需求进行灵活调整：
+    #   （一）从主干网络的预训练权重开始训练：
+    #       Init_Epoch = 0，Freeze_Epoch = 50，UnFreeze_Epoch = 150，Freeze_Train = True（冻结训练）
+    #       Init_Epoch = 0，UnFreeze_Epoch = 150，Freeze_Train = False（不冻结训练）
+    #       其中：由于从主干网络的预训练权重开始训练，主干的权值不一定适合目标检测，需要更多的训练跳出局部最优解。
+    #             UnFreeze_Epoch可以在150-300之间调整，YOLOV5和YOLOX均推荐使用300。optimizer_type = 'sgd'，Init_lr = 1e-2。
+    #   （二）batch_size的设置：
+    #       在显卡能够接受的范围内，以大为好。显存不足与数据集大小无关，提示显存不足（OOM或者CUDA out of memory）请调小batch_size。
+    #       受到BatchNorm层影响，batch_size最小为2，不能为1。
+    #       正常情况下Freeze_batch_size建议为Unfreeze_batch_size的1-2倍。不建议设置的差距过大，因为关系到学习率的自动调整。
+    #----------------------------------------------------------------------------------------------------------------------------#
     #------------------------------------------------------------------#
     #   冻结阶段训练参数
     #   此时模型的主干被冻结了，特征提取网络不发生改变
@@ -69,14 +81,14 @@ if __name__ == "__main__":
     #   UnFreeze_Epoch          模型总共训练的epoch
     #   Unfreeze_batch_size     模型在解冻后的batch_size
     #------------------------------------------------------------------#
-    UnFreeze_Epoch      = 100
+    UnFreeze_Epoch      = 150
     Unfreeze_batch_size = 8
     #------------------------------------------------------------------#
     #   Freeze_Train    是否进行冻结训练
     #                   默认先冻结主干训练后解冻训练。
     #                   如果设置Freeze_Train=False，建议使用优化器为sgd
     #------------------------------------------------------------------#
-    Freeze_Train        = True
+    Freeze_Train        = False
     
     #------------------------------------------------------------------#
     #   其它训练参数：学习率、优化器、学习率下降有关
@@ -138,6 +150,12 @@ if __name__ == "__main__":
     anchors     = Anchors(cfg, image_size=(cfg['train_image_size'], cfg['train_image_size'])).get_anchors()
     bbox_util   = BBoxUtility(anchors)
 
+    for layer in model.layers:
+        if isinstance(layer, DepthwiseConv2D):
+                layer.add_loss(l2(weight_decay)(layer.depthwise_kernel))
+        elif isinstance(layer, Conv2D) or isinstance(layer, Dense):
+                layer.add_loss(l2(weight_decay)(layer.kernel))
+
     #------------------------------------------------------#
     #   主干特征提取网络特征通用，冻结训练可以加快训练速度
     #   也可以在训练初期防止权值被破坏。
@@ -197,7 +215,7 @@ if __name__ == "__main__":
                                 monitor = 'loss', save_weights_only = True, save_best_only = False, period = save_period)
         early_stopping  = EarlyStopping(monitor='loss', min_delta = 0, patience = 10, verbose = 1)
         lr_scheduler    = LearningRateScheduler(lr_scheduler_func, verbose = 1)
-        callbacks       = [logging, loss_history, checkpoint, lr_scheduler, early_stopping]
+        callbacks       = [logging, loss_history, checkpoint, lr_scheduler]
 
         if start_epoch < end_epoch:
             model.fit_generator(
@@ -229,7 +247,7 @@ if __name__ == "__main__":
             #---------------------------------------#
             lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, UnFreeze_Epoch)
             lr_scheduler    = LearningRateScheduler(lr_scheduler_func, verbose = 1)
-            callbacks       = [logging, loss_history, checkpoint, lr_scheduler, early_stopping]
+            callbacks       = [logging, loss_history, checkpoint, lr_scheduler]
             
             for i in range(len(model.layers)): 
                 model.layers[i].trainable = True
