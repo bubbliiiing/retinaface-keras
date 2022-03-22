@@ -5,6 +5,7 @@ VOCdevkit/
 datasets/
 Medical_Datasets/
 data/
+widerface_evaluate/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

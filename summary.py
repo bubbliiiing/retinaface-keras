@@ -8,5 +8,5 @@ if __name__ == '__main__':
     model = RetinaFace(cfg_mnet, backbone="mobilenet")
     model.summary()
 
-    # for i,layer in enumerate(model.layers):
-    #     print(i,layer.name)
+    for i,layer in enumerate(model.layers):
+        print(i,layer.name)
