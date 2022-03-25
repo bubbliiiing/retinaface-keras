@@ -6,6 +6,9 @@ datasets/
 Medical_Datasets/
 data/
 widerface_evaluate/
+lfw/
+logs/
+model_data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
